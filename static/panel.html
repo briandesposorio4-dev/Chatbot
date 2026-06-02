@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Panel · La Estación</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --oro: #C9A84C; --oro-claro: #E8C97A;
+    --negro: #0E0E0E; --carbon: #161616;
+    --gris: #222; --gris2: #2E2E2E;
+    --texto: #F0EAD6; --muted: #7A6E5A;
+    --verde: #52B788; --rojo: #E63946;
+    --amarillo: #F4A261; --azul: #4A9EBF;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'Lato',sans-serif; background:var(--negro); color:var(--texto); min-height:100vh; max-width:500px; margin:0 auto; }
+
+  .topbar { background:var(--carbon); border-bottom:1px solid rgba(201,168,76,0.2); padding:16px 20px; position:sticky; top:0; z-index:100; }
+  .topbar-inner { display:flex; align-items:center; justify-content:space-between; }
+  .topbar h1 { font-family:'Playfair Display',serif; font-size:16px; color:var(--oro-claro); }
+  .topbar p  { font-size:11px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-top:2px; }
+  .refresh-btn { background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.25); color:var(--oro); padding:7px 14px; border-radius:20px; font-size:12px; cursor:pointer; font-family:'Lato',sans-serif; }
+
+  .tabs { display:flex; background:var(--carbon); border-bottom:1px solid rgba(255,255,255,0.06); padding:0 20px; gap:4px; }
+  .tab { flex:1; text-align:center; padding:12px 0; font-size:13px; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; }
+  .tab.active { color:var(--oro-claro); border-bottom-color:var(--oro); }
+
+  .stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:16px 16px 0; }
+  .stat { background:var(--gris); border-radius:12px; padding:14px 12px; border:1px solid rgba(255,255,255,0.05); text-align:center; }
+  .stat-num { font-family:'Playfair Display',serif; font-size:26px; color:var(--oro-claro); line-height:1; }
+  .stat-label { font-size:10px; color:var(--muted); margin-top:4px; letter-spacing:0.5px; text-transform:uppercase; }
+
+  .fecha-header { padding:16px 16px 8px; display:flex; align-items:center; justify-content:space-between; }
+  .fecha-header span { font-size:12px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; }
+  .fecha-nav { display:flex; gap:8px; align-items:center; }
+  .fecha-nav button { background:var(--gris2); border:none; color:var(--texto); width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:14px; }
+  .fecha-actual { font-size:13px; color:var(--oro-claro); min-width:110px; text-align:center; }
+
+  .lista { padding:0 16px 120px; display:flex; flex-direction:column; gap:10px; }
+  .reserva-card { background:var(--gris); border-radius:14px; padding:16px; border:1px solid rgba(255,255,255,0.05); animation:fadeIn 0.25s ease; position:relative; overflow:hidden; }
+  .reserva-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
+  .reserva-card.confirmada::before { background:var(--verde); }
+  .reserva-card.pendiente::before  { background:var(--amarillo); }
+  .reserva-card.cancelada::before  { background:var(--rojo); opacity:0.5; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+  .card-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+  .card-nombre { font-size:16px; font-weight:700; color:var(--texto); }
+  .card-hora { font-family:'Playfair Display',serif; font-size:18px; color:var(--oro-claro); text-align:right; line-height:1; }
+  .card-fecha-small { font-size:10px; color:var(--muted); text-align:right; margin-top:2px; }
+  .card-info { display:flex; gap:16px; margin-bottom:10px; flex-wrap:wrap; }
+  .info-item { display:flex; align-items:center; gap:5px; font-size:13px; color:var(--muted); }
+  .info-item strong { color:var(--texto); }
+  .card-bottom { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .badge { font-size:10px; padding:3px 10px; border-radius:20px; letter-spacing:0.5px; text-transform:uppercase; font-weight:700; white-space:nowrap; }
+  .badge.confirmada { background:rgba(82,183,136,0.15); color:var(--verde); }
+  .badge.pendiente  { background:rgba(244,162,97,0.15); color:var(--amarillo); }
+  .badge.cancelada  { background:rgba(230,57,70,0.12);  color:var(--rojo); }
+  .card-actions { display:flex; gap:6px; flex-wrap:wrap; }
+  .action-btn { font-size:11px; padding:5px 11px; border-radius:20px; border:none; cursor:pointer; font-family:'Lato',sans-serif; transition:opacity 0.15s; }
+  .action-btn:hover { opacity:0.8; }
+  .btn-cancelar  { background:rgba(230,57,70,0.15);  color:var(--rojo); }
+  .btn-confirmar { background:rgba(82,183,136,0.15); color:var(--verde); }
+  .btn-modificar { background:rgba(74,158,191,0.15); color:var(--azul); }
+  .btn-eliminar  { background:rgba(230,57,70,0.08);  color:#8A3A40; }
+  .card-notas { margin-top:8px; padding:8px 10px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:12px; color:var(--muted); font-style:italic; }
+
+  .empty { text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty div { font-size:36px; margin-bottom:12px; }
+  .empty p { font-size:14px; }
+  .loading { text-align:center; padding:40px; color:var(--muted); font-size:14px; }
+
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; padding:20px; }
+  .modal-overlay.visible { display:flex; }
+  .modal { background:var(--carbon); border-radius:18px; padding:24px; width:100%; max-width:380px; border:1px solid rgba(201,168,76,0.2); }
+  .modal h2 { font-family:'Playfair Display',serif; font-size:17px; color:var(--oro-claro); margin-bottom:6px; }
+  .modal-sub { font-size:12px; color:var(--muted); margin-bottom:20px; }
+  .form-group { margin-bottom:14px; }
+  .form-group label { display:block; font-size:11px; color:var(--muted); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:6px; }
+  .form-group input, .form-group textarea {
+    width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(201,168,76,0.2);
+    border-radius:10px; padding:10px 12px; color:var(--texto); font-family:'Lato',sans-serif;
+    font-size:13px; outline:none; transition:border-color 0.2s;
+  }
+  .form-group input:focus, .form-group textarea:focus { border-color:rgba(201,168,76,0.5); }
+  .form-group textarea { resize:vertical; min-height:60px; }
+  .modal-actions { display:flex; gap:10px; margin-top:20px; }
+  .btn-primary { flex:1; background:linear-gradient(135deg,#C9A84C,#A8832A); color:#0E0E0E; border:none; border-radius:10px; padding:12px; font-size:13px; font-weight:700; cursor:pointer; font-family:'Lato',sans-serif; }
+  .btn-secondary { flex:1; background:var(--gris2); color:var(--muted); border:none; border-radius:10px; padding:12px; font-size:13px; cursor:pointer; font-family:'Lato',sans-serif; }
+
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--gris2); color:var(--texto); padding:10px 20px; border-radius:20px; font-size:13px; opacity:0; transition:all 0.3s; z-index:300; pointer-events:none; white-space:nowrap; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <h1>Panel de Reservas</h1>
+      <p>La Estación de los Porches</p>
+    </div>
+    <button class="refresh-btn" onclick="cargarReservas()">↻ Actualizar</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="cambiarTab('hoy', this)">Hoy</div>
+  <div class="tab" onclick="cambiarTab('todas', this)">Todas</div>
+  <div class="tab" onclick="cambiarTab('pendientes', this)">Pendientes</div>
+  <div class="tab" onclick="cambiarTab('canceladas', this)">Canceladas</div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-num" id="stat-hoy">–</div><div class="stat-label">Hoy</div></div>
+  <div class="stat"><div class="stat-num" id="stat-total">–</div><div class="stat-label">Activas</div></div>
+  <div class="stat"><div class="stat-num" id="stat-personas">–</div><div class="stat-label">Personas hoy</div></div>
+</div>
+
+<div class="fecha-header">
+  <span>Reservas</span>
+  <div class="fecha-nav">
+    <button onclick="cambiarDia(-1)">‹</button>
+    <span class="fecha-actual" id="fecha-actual"></span>
+    <button onclick="cambiarDia(1)">›</button>
+  </div>
+</div>
+
+<div class="lista" id="lista">
+  <div class="loading">Cargando reservas...</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>Modificar reserva</h2>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div class="form-group">
+      <label>Fecha</label>
+      <input type="date" id="mod-fecha">
+    </div>
+    <div class="form-group">
+      <label>Hora</label>
+      <input type="time" id="mod-hora">
+    </div>
+    <div class="form-group">
+      <label>Personas</label>
+      <input type="number" id="mod-personas" min="1" max="500">
+    </div>
+    <div class="form-group">
+      <label>Notas internas</label>
+      <textarea id="mod-notas" placeholder="Alergias, cumpleaños, preferencias..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-primary" onclick="guardarModificacion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let tabActual = 'hoy';
+let fechaOffset = 0;
+let todasReservas = [];
+let reservaEditando = null;
+
+function getFecha() {
+  const d = new Date();
+  d.setDate(d.getDate() + fechaOffset);
+  return d;
+}
+function formatFechaES(d) {
+  return d.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' });
+}
+function formatISO(d) {
+  return d.toISOString().split('T')[0];
+}
+function cambiarDia(delta) {
+  fechaOffset += delta;
+  document.getElementById('fecha-actual').textContent = formatFechaES(getFecha());
+  renderLista();
+}
+function cambiarTab(tab, el) {
+  tabActual = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (tab !== 'hoy') { fechaOffset = 0; document.getElementById('fecha-actual').textContent = formatFechaES(getFecha()); }
+  renderLista();
+}
+async function cargarReservas() {
+  try {
+    const res = await fetch('/reservas');
+    todasReservas = await res.json();
+    actualizarStats();
+    renderLista();
+  } catch(e) {
+    document.getElementById('lista').innerHTML = '<div class="empty"><div>⚠️</div><p>No se pudo conectar</p></div>';
+  }
+}
+function actualizarStats() {
+  const hoyStr = formatISO(new Date());
+  const hoy = todasReservas.filter(r => r.fecha === hoyStr && r.estado === 'confirmada');
+  document.getElementById('stat-hoy').textContent = hoy.length;
+  document.getElementById('stat-total').textContent = todasReservas.filter(r => r.estado === 'confirmada' || r.estado === 'pendiente').length;
+  document.getElementById('stat-personas').textContent = hoy.reduce((s, r) => s + r.personas, 0);
+}
+function renderLista() {
+  const lista = document.getElementById('lista');
+  let filtradas = [...todasReservas];
+  const fechaSelISO = formatISO(getFecha());
+
+  if (tabActual === 'hoy') {
+    filtradas = filtradas.filter(r => r.fecha === fechaSelISO && r.estado !== 'cancelada');
+  } else if (tabActual === 'todas') {
+    filtradas = filtradas.filter(r => r.estado !== 'cancelada');
+  } else if (tabActual === 'pendientes') {
+    filtradas = filtradas.filter(r => r.estado === 'pendiente');
+  } else if (tabActual === 'canceladas') {
+    filtradas = filtradas.filter(r => r.estado === 'cancelada');
+  }
+
+  filtradas.sort((a,b) => (a.fecha||'').localeCompare(b.fecha||'') || (a.hora||'').localeCompare(b.hora||''));
+
+  if (filtradas.length === 0) {
+    lista.innerHTML = '<div class="empty"><div>🍽</div><p>No hay reservas</p></div>';
+    return;
+  }
+
+  lista.innerHTML = filtradas.map(r => `
+    <div class="reserva-card ${r.estado}">
+      <div class="card-top">
+        <div class="card-nombre">${escHtml(r.nombre)}</div>
+        <div>
+          <div class="card-hora">${r.hora || '–'}</div>
+          <div class="card-fecha-small">${formatFechaLabel(r.fecha)}</div>
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="info-item">👥 <strong>${r.personas}</strong> pers.</div>
+        <div class="info-item">📞 <strong>${escHtml(r.telefono)}</strong></div>
+      </div>
+      <div class="card-bottom">
+        <span class="badge ${r.estado}">${estadoLabel(r.estado)}</span>
+        <div class="card-actions">
+          ${r.estado !== 'cancelada' ? `
+            <button class="action-btn btn-modificar" onclick="abrirModal(${r.id})">✏️ Editar</button>
+            <button class="action-btn btn-cancelar" onclick="cancelarReserva(${r.id})">Cancelar</button>
+          ` : `
+            <button class="action-btn btn-confirmar" onclick="confirmarReserva(${r.id})">Restaurar</button>
+            <button class="action-btn btn-eliminar" onclick="eliminarReserva(${r.id})">Eliminar</button>
+          `}
+          ${r.estado === 'pendiente' ? `<button class="action-btn btn-confirmar" onclick="confirmarReserva(${r.id})">Confirmar</button>` : ''}
+        </div>
+      </div>
+      ${r.notas ? `<div class="card-notas">📝 ${escHtml(r.notas)}</div>` : ''}
+    </div>
+  `).join('');
+}
+function formatFechaLabel(fechaISO) {
+  if (!fechaISO) return '';
+  const [y, m, d] = fechaISO.split('-');
+  const date = new Date(y, m-1, d);
+  return date.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' });
+}
+function estadoLabel(e) {
+  return { confirmada:'Confirmada', pendiente:'Pendiente', cancelada:'Cancelada' }[e] || e;
+}
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+async function cancelarReserva(id) {
+  if (!confirm('¿Cancelar esta reserva?')) return;
+  await fetch(`/reservas/${id}/cancelar`, { method:'POST' });
+  mostrarToast('Reserva cancelada');
+  cargarReservas();
+}
+async function confirmarReserva(id) {
+  await fetch(`/reservas/${id}/confirmar`, { method:'POST' });
+  mostrarToast('Reserva confirmada ✅');
+  cargarReservas();
+}
+async function eliminarReserva(id) {
+  if (!confirm('¿Eliminar definitivamente esta reserva?')) return;
+  await fetch(`/reservas/${id}`, { method:'DELETE' });
+  mostrarToast('Reserva eliminada');
+  cargarReservas();
+}
+function abrirModal(id) {
+  reservaEditando = todasReservas.find(r => r.id === id);
+  if (!reservaEditando) return;
+  document.getElementById('modal-sub').textContent = `${reservaEditando.nombre} · ${reservaEditando.fecha} ${reservaEditando.hora}`;
+  document.getElementById('mod-fecha').value = reservaEditando.fecha || '';
+  document.getElementById('mod-hora').value = reservaEditando.hora || '';
+  document.getElementById('mod-personas').value = reservaEditando.personas || '';
+  document.getElementById('mod-notas').value = reservaEditando.notas || '';
+  document.getElementById('modalOverlay').classList.add('visible');
+}
+function cerrarModal() {
+  document.getElementById('modalOverlay').classList.remove('visible');
+  reservaEditando = null;
+}
+async function guardarModificacion() {
+  if (!reservaEditando) return;
+  const data = {
+    fecha: document.getElementById('mod-fecha').value || null,
+    hora: document.getElementById('mod-hora').value || null,
+    personas: parseInt(document.getElementById('mod-personas').value) || null,
+    notas: document.getElementById('mod-notas').value || null,
+  };
+  try {
+    const res = await fetch(`/reservas/${reservaEditando.id}/modificar`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data)
+    });
+    const json = await res.json();
+    if (json.ok) {
+      cerrarModal();
+      mostrarToast('Reserva actualizada ✅');
+      cargarReservas();
+    }
+  } catch(e) {
+    mostrarToast('Error al guardar');
+  }
+}
+function mostrarToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModal();
+});
+document.getElementById('fecha-actual').textContent = formatFechaES(new Date());
+cargarReservas();
+setInterval(cargarReservas, 30000);
+</script>
+</body>
+</html>
